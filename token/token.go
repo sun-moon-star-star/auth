@@ -25,7 +25,7 @@ func pkcs7UnPadding(origData []byte) []byte {
     return origData[:(length - unpadding)]
 }
 
-func aesEncrypt(origData, key []byte) ([]byte, error) {
+func AesEncrypt(origData, key []byte) ([]byte, error) {
     block, err := aes.NewCipher(key)
     if err != nil {
         return nil, err
@@ -38,7 +38,7 @@ func aesEncrypt(origData, key []byte) ([]byte, error) {
     return crypted, nil
 }
 
-func aesDecrypt(crypted, key []byte) ([]byte, error) {
+func AesDecrypt(crypted, key []byte) ([]byte, error) {
     block, err := aes.NewCipher(key)
     if err != nil {
         return nil, err
@@ -57,12 +57,12 @@ func GenerateToken(TokenContent *TokenContent, key []byte) ([]byte, error) {
         return nil, err
     }
     var tokenStr []byte
-    tokenStr, err = aesEncrypt(tokenContentStr, key)
+    tokenStr, err = AesEncrypt(tokenContentStr, key)
     return tokenStr, nil
 }
 
 func CheckToken(tokenStr []byte , key []byte) (*TokenContent, error) {
-    tokenContentStr, err := aesDecrypt(tokenStr, key)
+    tokenContentStr, err := AesDecrypt(tokenStr, key)
     if err != nil {
         return nil, nil
     }
