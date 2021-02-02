@@ -7,7 +7,7 @@ import (
     "reflect"
 )
 
-func TestBase(t *testing.T) {
+func TestTokenBase(t *testing.T) {
     key := "bajiuwenqingtian" // mod 16 == 0
 
     rawTokenContent := &TokenContent{
