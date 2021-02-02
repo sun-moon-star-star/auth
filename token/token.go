@@ -1,35 +1,37 @@
 package token
 
 import (
-    "encoding/json"
-    "auth/crypt"
+    "auth/crypto"
+    "fmt"
+    "sort"
+    "encoding/hex"
 )
 
-type TokenContent struct {
+type Token struct {
     CreateTime uint64 `json:"CreateTime"`
-    ID string `json:"ID"` 
-    Message string `json:"Message"`
+    ExpireSeconds uint32 `json:"ExpireSeconds"`
+    Info map[string]string `json:"Info"`
+    Signature string `json:"Signature"`
 }
 
-func GenerateToken(TokenContent *TokenContent, key []byte) ([]byte, error) {
-    tokenContentStr, err := json.Marshal(TokenContent)
-    if err != nil {
-        return nil, err
+func Signature(token *Token, key []byte) string {
+    tokenStr := fmt.Sprintf("CreateTime=%d&ExpireSeconds=%d\n", token.CreateTime, token.ExpireSeconds)
+
+    var keys []string
+    for k := range token.Info {
+        keys = append(keys, k)
     }
-    var tokenStr []byte
-    tokenStr, err = crypt.AesEncrypt(tokenContentStr, key)
-    return tokenStr, nil
+    sort.Strings(keys)
+
+    for _, k := range keys {
+        tokenStr += fmt.Sprintf("&%s=%s", k, token.Info[k])
+    }
+
+    signature := crypto.Hmac([]byte(tokenStr), key)
+
+    return hex.EncodeToString(signature)
 }
 
-func CheckToken(tokenStr []byte , key []byte) (*TokenContent, error) {
-    tokenContentStr, err := crypt.AesDecrypt(tokenStr, key)
-    if err != nil {
-        return nil, nil
-    }
-    var token TokenContent 
-    err = json.Unmarshal(tokenContentStr, &token)
-    if err != nil {
-        return nil, nil
-    }
-    return &token, err
+func CheckToken(token *Token, key []byte) bool {
+    return token.Signature ==  Signature(token, key)
 }
