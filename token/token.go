@@ -1,37 +1,37 @@
 package token
 
 import (
-    "auth/crypto"
-    "fmt"
-    "sort"
-    "encoding/hex"
+	"auth/crypto"
+	"encoding/hex"
+	"fmt"
+	"sort"
 )
 
 type Token struct {
-    CreateTime uint64 `json:"CreateTime"`
-    ExpireSeconds uint32 `json:"ExpireSeconds"`
-    Info map[string]string `json:"Info"`
-    Signature string `json:"Signature"`
+	CreateTime    uint64            `json:"CreateTime"`
+	ExpireSeconds uint32            `json:"ExpireSeconds"`
+	Info          map[string]string `json:"Info"`
+	Signature     string            `json:"Signature"`
 }
 
 func Signature(token *Token, key []byte) string {
-    tokenStr := fmt.Sprintf("CreateTime=%d&ExpireSeconds=%d\n", token.CreateTime, token.ExpireSeconds)
+	tokenStr := fmt.Sprintf("CreateTime=%d&ExpireSeconds=%d\n", token.CreateTime, token.ExpireSeconds)
 
-    var keys []string
-    for k := range token.Info {
-        keys = append(keys, k)
-    }
-    sort.Strings(keys)
+	var keys []string
+	for k := range token.Info {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-    for _, k := range keys {
-        tokenStr += fmt.Sprintf("&%s=%s", k, token.Info[k])
-    }
+	for _, k := range keys {
+		tokenStr += fmt.Sprintf("&%s=%s", k, token.Info[k])
+	}
 
-    signature := crypto.Hmac([]byte(tokenStr), key)
+	signature := crypto.Hmac([]byte(tokenStr), key)
 
-    return hex.EncodeToString(signature)
+	return hex.EncodeToString(signature)
 }
 
 func CheckToken(token *Token, key []byte) bool {
-    return token.Signature ==  Signature(token, key)
+	return token.Signature == Signature(token, key)
 }
