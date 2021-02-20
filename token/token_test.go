@@ -9,6 +9,7 @@ func TestTokenBase(t *testing.T) {
 	key := "bajiuwenqingtian"
 
 	token := &Token{
+		ID:            1612276579,
 		CreateTime:    1612276579,
 		ExpireSeconds: 3600,
 		Info:          make(map[string]string),

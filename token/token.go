@@ -8,6 +8,7 @@ import (
 )
 
 type Token struct {
+	ID            uint64            `json:"ID"`
 	CreateTime    uint64            `json:"CreateTime"`
 	ExpireSeconds uint32            `json:"ExpireSeconds"`
 	Info          map[string]string `json:"Info"`
