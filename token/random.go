@@ -11,6 +11,14 @@ func init() {
 	rand.Seed(time.Now().Unix() ^ int64(os.Getpid()))
 }
 
+func GetUint64() uint64 {
+	return uint64(rand.Uint32())<<32 + uint64(rand.Uint32())
+}
+
+func GetInt64() int64 {
+	return int64(rand.Uint32())<<32 + int64(rand.Uint32())
+}
+
 // 格式: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 func GetUUID() (string, error) {
 	b := make([]byte, 16)
