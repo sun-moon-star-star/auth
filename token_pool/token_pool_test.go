@@ -5,7 +5,10 @@ import (
 )
 
 func TestTokenPoolBase(t *testing.T) {
-	pool := New(1200, []byte("DZFSJTDJQNYYJQRX"))
+	var expireSeconds uint32 = 1200
+	key := []byte("DZFSJTDJQNYYJQRX")
+
+	pool := New(expireSeconds, key)
 	token := pool.GenerateToken(nil)
 	t.Log(token)
 }

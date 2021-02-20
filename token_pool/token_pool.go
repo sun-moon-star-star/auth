@@ -8,7 +8,7 @@ import (
 )
 
 type TokenFlag struct {
-	ID         uint64
+	ID         token.TokenID
 	ExpireTime uint64
 }
 
@@ -16,7 +16,7 @@ type TokenPool struct {
 	DefaultExpireSeconds uint32
 	DefaultKey           []byte
 	TokenFlags           *list.List
-	IndexID              map[uint64]*list.Element
+	IndexID              map[token.TokenID]*list.Element
 }
 
 func New(DefaultExpireSeconds uint32, DefaultKey []byte) *TokenPool {
@@ -24,7 +24,7 @@ func New(DefaultExpireSeconds uint32, DefaultKey []byte) *TokenPool {
 		DefaultExpireSeconds: DefaultExpireSeconds,
 		DefaultKey:           DefaultKey,
 		TokenFlags:           list.New(),
-		IndexID:              make(map[uint64]*list.Element),
+		IndexID:              make(map[token.TokenID]*list.Element),
 	}
 }
 
@@ -86,7 +86,7 @@ func (t *TokenPool) PushWithSelfGenerate(token *token.Token) error {
 	return t.push(token)
 }
 
-func (t *TokenPool) Remove(ID uint64) error {
+func (t *TokenPool) Remove(ID token.TokenID) error {
 	t.RemoveExpire()
 
 	element, ok := t.IndexID[ID]
@@ -119,7 +119,7 @@ func (t *TokenPool) generateTokenNoCopyInfo(info map[string]string, expireSecond
 	createTime := uint64(time.Now().Unix())
 
 	newToken := &token.Token{
-		ID:         token.RandomUint64(),
+		ID:         token.GenerateTokenID(),
 		CreateTime: createTime,
 		ExpireTime: createTime + uint64(expireSeconds),
 		Info:       info,
@@ -130,7 +130,7 @@ func (t *TokenPool) generateTokenNoCopyInfo(info map[string]string, expireSecond
 		if !ok {
 			break
 		}
-		newToken.ID = token.RandomUint64()
+		newToken.ID = token.GenerateTokenID()
 	}
 
 	newToken.Sign(key)
