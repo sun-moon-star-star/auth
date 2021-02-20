@@ -2,6 +2,7 @@ package token
 
 import (
 	"auth/crypto"
+	"auth/random"
 	"encoding/hex"
 	"fmt"
 	"sort"
@@ -19,7 +20,7 @@ type Token struct {
 }
 
 func GenerateTokenID() TokenID {
-	return TokenID(RandomUint64())
+	return TokenID(random.RandomUint64())
 }
 
 func Sign(token *Token, key []byte) string {
