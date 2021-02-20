@@ -13,16 +13,14 @@ type TokenFlag struct {
 	ExpireTime uint64
 }
 
-type PushStrategy func(*token.Token, *TokenPool) bool
-
-type CheckStrategy func(*token.Token, *TokenPool) bool
+type Strategy func(*token.Token, *TokenPool) bool
 
 type TokenPool struct {
 	DefaultExpireSeconds uint32
 	DefaultKey           []byte
 
-	PushStrategy  PushStrategy
-	CheckStrategy CheckStrategy
+	PushStrategy  Strategy
+	CheckStrategy Strategy
 
 	TokenFlags *list.List
 	IndexID    map[token.TokenID]*list.Element
@@ -34,8 +32,8 @@ type TokenPool struct {
 type TokenPoolOption struct {
 	DefaultExpireSeconds uint32
 	DefaultKey           []byte
-	PushStrategy         PushStrategy
-	CheckStrategy        CheckStrategy
+	PushStrategy         Strategy
+	CheckStrategy        Strategy
 }
 
 var defaultTokenPoolOption = TokenPoolOption{
@@ -63,12 +61,15 @@ func NewWithOption(option TokenPoolOption) *TokenPool {
 	return &TokenPool{
 		DefaultExpireSeconds: option.DefaultExpireSeconds,
 		DefaultKey:           option.DefaultKey,
-		PushStrategy:         option.PushStrategy,
-		CheckStrategy:        option.CheckStrategy,
-		TokenFlags:           list.New(),
-		IndexID:              make(map[token.TokenID]*list.Element),
-		ExpiredTokenFlags:    list.New(),
-		ExpiredIDs:           make(map[token.TokenID]uint64),
+
+		PushStrategy:  option.PushStrategy,
+		CheckStrategy: option.CheckStrategy,
+
+		TokenFlags: list.New(),
+		IndexID:    make(map[token.TokenID]*list.Element),
+
+		ExpiredTokenFlags: list.New(),
+		ExpiredIDs:        make(map[token.TokenID]uint64),
 	}
 }
 
