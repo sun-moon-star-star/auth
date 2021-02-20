@@ -8,12 +8,18 @@ import (
 	"time"
 )
 
+type TokenID uint64
+
 type Token struct {
-	ID         uint64            `json:"ID"`
+	ID         TokenID           `json:"ID"`
 	CreateTime uint64            `json:"CreateTime"`
 	ExpireTime uint64            `json:"ExpireTime"`
 	Info       map[string]string `json:"Info"`
 	Signature  string            `json:"Signature"`
+}
+
+func GenerateTokenID() TokenID {
+	return TokenID(RandomUint64())
 }
 
 func Sign(token *Token, key []byte) string {

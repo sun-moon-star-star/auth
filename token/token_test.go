@@ -9,7 +9,7 @@ func TestTokenBase(t *testing.T) {
 	key := "bajiuwenqingtian"
 
 	token := &Token{
-		ID:         1612276579,
+		ID:         GenerateTokenID(),
 		CreateTime: 1612276579,
 		ExpireTime: 1612276580,
 		Info:       make(map[string]string),
@@ -36,7 +36,7 @@ func BenchmarkTokenBase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		key := "bajiuwenqingtian"
 		token := &Token{
-			ID:         1612276579,
+			ID:         GenerateTokenID(),
 			CreateTime: 1612276579,
 			ExpireTime: 1612276580,
 			Info:       make(map[string]string),
