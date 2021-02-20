@@ -47,6 +47,8 @@ func generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key [
 		Info:       info,
 	}
 
+	newToken.Sign(key)
+
 	return newToken
 }
 

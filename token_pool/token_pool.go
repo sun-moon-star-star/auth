@@ -1,6 +1,7 @@
 package token_pool
 
 import (
+	"auth/random"
 	"auth/token"
 	"container/list"
 	"fmt"
@@ -12,43 +13,116 @@ type TokenFlag struct {
 	ExpireTime uint64
 }
 
+type PushStrategy func(*token.Token, *TokenPool) bool
+
+type CheckStrategy func(*token.Token, *TokenPool) bool
+
 type TokenPool struct {
 	DefaultExpireSeconds uint32
 	DefaultKey           []byte
-	TokenFlags           *list.List
-	IndexID              map[token.TokenID]*list.Element
+
+	PushStrategy  PushStrategy
+	CheckStrategy CheckStrategy
+
+	TokenFlags *list.List
+	IndexID    map[token.TokenID]*list.Element
+
+	ExpiredTokenFlags *list.List
+	ExpiredIDs        map[token.TokenID]uint64
 }
 
-func New(DefaultExpireSeconds uint32, DefaultKey []byte) *TokenPool {
+type TokenPoolOption struct {
+	DefaultExpireSeconds uint32
+	DefaultKey           []byte
+	PushStrategy         PushStrategy
+	CheckStrategy        CheckStrategy
+}
+
+var defaultTokenPoolOption = TokenPoolOption{
+	DefaultExpireSeconds: 1200, // 20min
+	DefaultKey:           []byte(random.RandomString(16)),
+	PushStrategy: func(*token.Token, *TokenPool) bool {
+		return false
+	},
+	CheckStrategy: func(token *token.Token, pool *TokenPool) bool {
+		_, ok := pool.ExpiredIDs[token.ID]
+		if ok {
+			return false
+		}
+		return token.Check(pool.DefaultKey)
+	},
+}
+
+func NewWithOption(option TokenPoolOption) *TokenPool {
 	return &TokenPool{
-		DefaultExpireSeconds: DefaultExpireSeconds,
-		DefaultKey:           DefaultKey,
+		DefaultExpireSeconds: option.DefaultExpireSeconds,
+		DefaultKey:           option.DefaultKey,
+		PushStrategy:         option.PushStrategy,
+		CheckStrategy:        option.CheckStrategy,
 		TokenFlags:           list.New(),
 		IndexID:              make(map[token.TokenID]*list.Element),
+		ExpiredTokenFlags:    list.New(),
+		ExpiredIDs:           make(map[token.TokenID]uint64),
 	}
 }
 
+func New() *TokenPool {
+	return NewWithOption(defaultTokenPoolOption)
+}
+
 // 定时任务清理
-func (t *TokenPool) RemoveExpire() {
-	for t.TokenFlags.Len() > 0 {
-		element := t.TokenFlags.Front()
+func (pool *TokenPool) ClearExpired() {
+	for pool.TokenFlags.Len() > 0 {
+		element := pool.TokenFlags.Front()
 		tokenFlag := element.Value.(*TokenFlag)
 
 		if tokenFlag.ExpireTime <= uint64(time.Now().Unix()) {
-			delete(t.IndexID, tokenFlag.ID)
-			t.TokenFlags.Remove(element)
+			pool.TokenFlags.Remove(element)
+			delete(pool.IndexID, tokenFlag.ID)
 		} else {
-			return
+			break
+		}
+	}
+
+	for pool.ExpiredTokenFlags.Len() > 0 {
+		element := pool.TokenFlags.Front()
+		tokenFlag := element.Value.(*TokenFlag)
+
+		if tokenFlag.ExpireTime <= uint64(time.Now().Unix()) {
+			pool.ExpiredTokenFlags.Remove(element)
+			delete(pool.ExpiredIDs, tokenFlag.ID)
+		} else {
+			break
 		}
 	}
 }
 
-func (t *TokenPool) push(token *token.Token) error {
-	t.RemoveExpire()
+func pushSatisfied(value interface{}, list *list.List, condition func(*list.Element, interface{}) bool) *list.Element {
+	if list.Len() == 0 {
+		return list.PushFront(value)
+	}
 
-	_, ok := t.IndexID[token.ID]
-	if ok {
-		return fmt.Errorf("token(ID: %d) exists in token pool", token.ID)
+	element := list.Back()
+
+	for {
+		if condition(element, value) {
+			break
+		}
+		element = element.Prev()
+	}
+
+	if element == nil {
+		return list.PushFront(value)
+	} else {
+		return list.InsertAfter(value, element)
+	}
+}
+
+func (pool *TokenPool) push(token *token.Token) error {
+	pool.ClearExpired()
+
+	if !pool.PushStrategy(token, pool) {
+		return fmt.Errorf("push strategy refused token(id: %d)", token.ID)
 	}
 
 	tokenFlag := &TokenFlag{
@@ -56,101 +130,83 @@ func (t *TokenPool) push(token *token.Token) error {
 		ExpireTime: token.ExpireTime,
 	}
 
-	var element *list.Element
-
-	if t.TokenFlags.Len() == 0 {
-		element = t.TokenFlags.PushBack(tokenFlag)
-	} else {
-		element = t.TokenFlags.Back()
-
-		for {
-			if element == nil || element.Value.(*TokenFlag).ExpireTime <= tokenFlag.ExpireTime {
-				break
-			}
-			element = element.Prev()
-		}
-
-		if element == nil {
-			element = t.TokenFlags.PushFront(tokenFlag)
-		} else {
-			element = t.TokenFlags.InsertAfter(tokenFlag, element)
-		}
+	condition := func(element *list.Element, value interface{}) bool {
+		return element == nil || element.Value.(*TokenFlag).ExpireTime <= value.(*TokenFlag).ExpireTime
 	}
 
-	t.IndexID[tokenFlag.ID] = element
+	element := pushSatisfied(tokenFlag, pool.TokenFlags, condition)
+	pool.IndexID[tokenFlag.ID] = element
 
 	return nil
 }
 
-func (t *TokenPool) PushWithSelfGenerate(token *token.Token) error {
-	return t.push(token)
+func (pool *TokenPool) PushWithSelfGenerate(token *token.Token) error {
+	return pool.push(token)
 }
 
-func (t *TokenPool) Remove(ID token.TokenID) error {
-	t.RemoveExpire()
+func (pool *TokenPool) GetTokenFlag(ID token.TokenID) *TokenFlag {
+	element, ok := pool.IndexID[ID]
+	if !ok {
+		return nil
+	}
+	return element.Value.(*TokenFlag)
+}
 
-	element, ok := t.IndexID[ID]
+func (pool *TokenPool) RemoveToken(ID token.TokenID) error {
+	pool.ClearExpired()
+
+	element, ok := pool.IndexID[ID]
 	if !ok {
 		return fmt.Errorf("token(ID: %d) is expired or not exists, cannot be remove", ID)
 	}
 
-	t.TokenFlags.Remove(element)
-	delete(t.IndexID, ID)
+	pool.TokenFlags.Remove(element)
+	delete(pool.IndexID, ID)
 
 	return nil
 }
 
-func (t *TokenPool) Check(token *token.Token) error {
-	t.RemoveExpire()
+func (pool *TokenPool) Expired(tokenFlag TokenFlag) {
+	pool.ClearExpired()
 
-	_, ok := t.IndexID[token.ID]
-	if !ok {
-		return fmt.Errorf("token(ID: %d) is expired or not exists, please try to acquire new token", token.ID)
+	pool.ExpiredIDs[tokenFlag.ID] = tokenFlag.ExpireTime
+
+	condition := func(element *list.Element, value interface{}) bool {
+		return element == nil || element.Value.(*TokenFlag).ExpireTime <= value.(*TokenFlag).ExpireTime
 	}
+	pushSatisfied(tokenFlag, pool.ExpiredTokenFlags, condition)
+}
 
-	if !token.CheckSign(t.DefaultKey) {
-		return fmt.Errorf("token(ID: %d) is not valid", token.ID)
+func (pool *TokenPool) Check(token *token.Token) error {
+	pool.ClearExpired()
+
+	if !pool.CheckStrategy(token, pool) {
+		return fmt.Errorf("check strategy check token(id: %d) failed", token.ID)
 	}
 
 	return nil
 }
 
-func (t *TokenPool) generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *token.Token {
-	newToken := token.GenerateTokenNoCopyInfo(info, expireSeconds, key)
-
-	for {
-		_, ok := t.IndexID[newToken.ID]
-		if !ok {
-			break
-		}
-		newToken.ID = token.GenerateTokenID()
+func (pool *TokenPool) generateToken(info map[string]string, expireSeconds uint32, key []byte, copyInfo bool) *token.Token {
+	var newToken *token.Token
+	if copyInfo {
+		newToken = token.GenerateToken(info, expireSeconds, key)
+	} else {
+		newToken = token.GenerateTokenNoCopyInfo(info, expireSeconds, key)
 	}
 
-	newToken.Sign(key)
-
-	t.push(newToken)
-
+	pool.push(newToken)
 	return newToken
 }
 
-func copyInfo(info map[string]string) map[string]string {
-	if info == nil {
-		return nil
-	}
-
-	infoNew := make(map[string]string)
-
-	for k, v := range info {
-		infoNew[k] = v
-	}
-
-	return infoNew
-}
-
 func (t *TokenPool) GenerateTokenNoCopyInfo(info map[string]string) *token.Token {
-	return t.generateTokenNoCopyInfo(info, t.DefaultExpireSeconds, t.DefaultKey)
+	return t.generateToken(info, t.DefaultExpireSeconds, t.DefaultKey, false)
 }
 
 func (t *TokenPool) GenerateToken(info map[string]string) *token.Token {
-	return t.generateTokenNoCopyInfo(copyInfo(info), t.DefaultExpireSeconds, t.DefaultKey)
+	return t.generateToken(info, t.DefaultExpireSeconds, t.DefaultKey, true)
+}
+
+func (t *TokenPool) GenerateTokenID() *token.Token {
+	return t.generateToken(nil, t.DefaultExpireSeconds, t.DefaultKey, false)
 }
