@@ -9,10 +9,10 @@ func TestTokenBase(t *testing.T) {
 	key := "bajiuwenqingtian"
 
 	token := &Token{
-		ID:            1612276579,
-		CreateTime:    1612276579,
-		ExpireSeconds: 3600,
-		Info:          make(map[string]string),
+		ID:         1612276579,
+		CreateTime: 1612276579,
+		ExpireTime: 1612276580,
+		Info:       make(map[string]string),
 	}
 
 	token.Info["age"] = "21"
@@ -36,10 +36,10 @@ func BenchmarkTokenBase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		key := "bajiuwenqingtian"
 		token := &Token{
-			ID:            1612276579,
-			CreateTime:    1612276579,
-			ExpireSeconds: 3600,
-			Info:          make(map[string]string),
+			ID:         1612276579,
+			CreateTime: 1612276579,
+			ExpireTime: 1612276580,
+			Info:       make(map[string]string),
 		}
 
 		token.Info["age"] = "21"
