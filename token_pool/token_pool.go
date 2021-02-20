@@ -116,14 +116,7 @@ func (t *TokenPool) Check(token *token.Token) error {
 }
 
 func (t *TokenPool) generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *token.Token {
-	createTime := uint64(time.Now().Unix())
-
-	newToken := &token.Token{
-		ID:         token.GenerateTokenID(),
-		CreateTime: createTime,
-		ExpireTime: createTime + uint64(expireSeconds),
-		Info:       info,
-	}
+	newToken := token.GenerateTokenNoCopyInfo(info, expireSeconds, key)
 
 	for {
 		_, ok := t.IndexID[newToken.ID]

@@ -23,6 +23,41 @@ func GenerateTokenID() TokenID {
 	return TokenID(random.RandomUint64())
 }
 
+func copyInfo(info map[string]string) map[string]string {
+	if info == nil {
+		return nil
+	}
+
+	infoNew := make(map[string]string)
+
+	for k, v := range info {
+		infoNew[k] = v
+	}
+
+	return infoNew
+}
+
+func generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *Token {
+	createTime := uint64(time.Now().Unix())
+
+	newToken := &Token{
+		ID:         GenerateTokenID(),
+		CreateTime: createTime,
+		ExpireTime: createTime + uint64(expireSeconds),
+		Info:       info,
+	}
+
+	return newToken
+}
+
+func GenerateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *Token {
+	return generateTokenNoCopyInfo(info, expireSeconds, key)
+}
+
+func GenerateToken(info map[string]string, expireSeconds uint32, key []byte) *Token {
+	return generateTokenNoCopyInfo(copyInfo(info), expireSeconds, key)
+}
+
 func Sign(token *Token, key []byte) string {
 	tokenStr := fmt.Sprintf("CreateTime=%d&ExpireTime=%d\n", token.CreateTime, token.ExpireTime)
 
