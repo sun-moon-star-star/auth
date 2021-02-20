@@ -42,13 +42,19 @@ var defaultTokenPoolOption = TokenPoolOption{
 	DefaultExpireSeconds: 1200, // 20min
 	DefaultKey:           []byte(random.RandomString(16)),
 	PushStrategy: func(*token.Token, *TokenPool) bool {
-		return false
+		return true
 	},
 	CheckStrategy: func(token *token.Token, pool *TokenPool) bool {
 		_, ok := pool.ExpiredIDs[token.ID]
 		if ok {
 			return false
 		}
+
+		_, ok = pool.IndexID[token.ID]
+		if !ok {
+			return false
+		}
+
 		return token.Check(pool.DefaultKey)
 	},
 }

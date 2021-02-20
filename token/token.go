@@ -87,7 +87,7 @@ func (token *Token) CheckSign(key []byte) bool {
 }
 
 func (token *Token) CheckTime() bool {
-	return token.ExpireTime < uint64(time.Now().Unix())
+	return token.ExpireTime > uint64(time.Now().Unix())
 }
 
 func (token *Token) Check(key []byte) bool {
