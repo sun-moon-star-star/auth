@@ -1,13 +1,15 @@
 package token_pool
 
 import (
-	token "auth/token"
-	list "container/list"
+	"auth/token"
+	"container/list"
+	"fmt"
 	"time"
 )
 
 type TokenFlag struct {
 	ID            uint64
+	CreateTime    uint64
 	ExpireSeconds uint32
 }
 
@@ -27,30 +29,95 @@ func New(DefaultExpireSeconds uint32, DefaultKey []byte) *TokenPool {
 	}
 }
 
-func (t TokenPool) Push(token *token.Token) {
-	tf := &TokenFlag{
-		ID:            token.ID,
-		ExpireSeconds: token.ExpireSeconds,
+func (t *TokenPool) RemoveExpire() {
+	for t.TokenFlags.Len() > 0 {
+		element := t.TokenFlags.Front()
+		tokenFlag := element.Value.(*TokenFlag)
+
+		if tokenFlag.CreateTime+uint64(tokenFlag.ExpireSeconds) >= uint64(time.Now().Unix()) {
+			delete(t.IndexID, tokenFlag.ID)
+			t.TokenFlags.Remove(element)
+		} else {
+			return
+		}
 	}
-	element := t.TokenFlags.PushBack(tf)
-	t.IndexID[tf.ID] = element
 }
 
-func generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *token.Token {
-	token := &token.Token{
+func (t *TokenPool) Push(token *token.Token) error {
+	t.RemoveExpire()
+
+	_, ok := t.IndexID[token.ID]
+	if ok {
+		return fmt.Errorf("token(ID: %d) exists in token pool", token.ID)
+	}
+
+	tokenFlag := &TokenFlag{
+		ID:            token.ID,
+		CreateTime:    token.CreateTime,
+		ExpireSeconds: token.ExpireSeconds,
+	}
+
+	element := t.TokenFlags.PushBack(tokenFlag)
+	t.IndexID[tokenFlag.ID] = element
+
+	return nil
+}
+
+func (t *TokenPool) Remove(ID uint64) error {
+	t.RemoveExpire()
+
+	element, ok := t.IndexID[ID]
+	if !ok {
+		return fmt.Errorf("token(ID: %d) not exists in token pool, cannot be remove", ID)
+	}
+
+	t.TokenFlags.Remove(element)
+	delete(t.IndexID, ID)
+
+	return nil
+}
+
+func (t *TokenPool) Check(token *token.Token) error {
+	t.RemoveExpire()
+
+	element, ok := t.IndexID[token.ID]
+	if !ok {
+		return fmt.Errorf("token(ID: %d) not exists in token pool, please try to acquire new token", token.ID)
+	}
+
+	tokenFlag := element.Value.(*TokenFlag)
+	if tokenFlag.CreateTime+uint64(tokenFlag.ExpireSeconds) >= uint64(time.Now().Unix()) {
+		return fmt.Errorf("token(ID: %d) is expired, please try to acquire new token", token.ID)
+	}
+
+	if !token.Check(t.DefaultKey) {
+		return fmt.Errorf("token(ID: %d) is not valid", token.ID)
+	}
+
+	return nil
+}
+
+func (t *TokenPool) generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *token.Token {
+	newToken := &token.Token{
 		ID:            token.RandomUint64(),
 		CreateTime:    uint64(time.Now().Unix()),
 		ExpireSeconds: expireSeconds,
 		Info:          info,
 	}
-	token.Sign(key)
-	return token
-}
 
-func (t *TokenPool) GenerateTokenNoCopyInfo(info map[string]string) *token.Token {
-	token := generateTokenNoCopyInfo(info, t.DefaultExpireSeconds, t.DefaultKey)
-	t.Push(token)
-	return token
+	for {
+		_, ok := t.IndexID[newToken.ID]
+		if !ok {
+			break
+		}
+		newToken.ID = token.RandomUint64()
+	}
+
+	newToken.Sign(key)
+
+	t.Push(newToken)
+
+	return newToken
 }
 
 func copyInfo(info map[string]string) map[string]string {
@@ -63,36 +130,10 @@ func copyInfo(info map[string]string) map[string]string {
 	return infoNew
 }
 
+func (t *TokenPool) GenerateTokenNoCopyInfo(info map[string]string) *token.Token {
+	return t.generateTokenNoCopyInfo(info, t.DefaultExpireSeconds, t.DefaultKey)
+}
+
 func (t *TokenPool) GenerateToken(info map[string]string) *token.Token {
-	return t.GenerateTokenNoCopyInfo(copyInfo(info))
-}
-
-func (t *TokenPool) GenerateTokenNoCopyInfoWithKey(info map[string]string, key []byte) *token.Token {
-	token := generateTokenNoCopyInfo(info, t.DefaultExpireSeconds, key)
-	t.Push(token)
-	return token
-}
-
-func (t *TokenPool) GenerateTokenWithKey(info map[string]string, key []byte) *token.Token {
-	return t.GenerateTokenNoCopyInfoWithKey(copyInfo(info), key)
-}
-
-func (t *TokenPool) GenerateTokenNoCopyInfoWithExpireSeconds(info map[string]string, expireSeconds uint32) *token.Token {
-	token := generateTokenNoCopyInfo(info, expireSeconds, t.DefaultKey)
-	t.Push(token)
-	return token
-}
-
-func (t *TokenPool) GenerateTokenWithExpireSeconds(info map[string]string, expireSeconds uint32) *token.Token {
-	return t.GenerateTokenNoCopyInfoWithExpireSeconds(copyInfo(info), expireSeconds)
-}
-
-func (t *TokenPool) GenerateTokenNoCopyInfoWithExpireSecondsAndKey(info map[string]string, expireSeconds uint32, key []byte) *token.Token {
-	token := generateTokenNoCopyInfo(info, expireSeconds, key)
-	t.Push(token)
-	return token
-}
-
-func (t *TokenPool) GenerateTokenWithExpireSecondsAndKey(info map[string]string, expireSeconds uint32, key []byte) *token.Token {
-	return t.GenerateTokenNoCopyInfoWithExpireSecondsAndKey(copyInfo(info), expireSeconds, key)
+	return t.generateTokenNoCopyInfo(copyInfo(info), t.DefaultExpireSeconds, t.DefaultKey)
 }
