@@ -15,7 +15,7 @@ type Token struct {
 	Signature     string            `json:"Signature"`
 }
 
-func Signature(token *Token, key []byte) string {
+func signature(token *Token, key []byte) string {
 	tokenStr := fmt.Sprintf("CreateTime=%d&ExpireSeconds=%d\n", token.CreateTime, token.ExpireSeconds)
 
 	var keys []string
@@ -33,6 +33,10 @@ func Signature(token *Token, key []byte) string {
 	return hex.EncodeToString(signature)
 }
 
-func CheckToken(token *Token, key []byte) bool {
-	return token.Signature == Signature(token, key)
+func (token *Token) signature(key []byte) {
+	token.Signature = signature(token, key)
+}
+
+func (token *Token) check(key []byte) bool {
+	return token.Signature == signature(token, key)
 }

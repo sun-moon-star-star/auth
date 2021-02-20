@@ -18,7 +18,7 @@ func TestTokenBase(t *testing.T) {
 	token.Info["age"] = "21"
 	token.Info["name"] = "zhao"
 
-	token.Signature = Signature(token, []byte(key))
+	token.signature([]byte(key))
 
 	t.Log(token.Signature)
 
@@ -36,6 +36,7 @@ func BenchmarkTokenBase(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		key := "bajiuwenqingtian"
 		token := &Token{
+			ID:            1612276579,
 			CreateTime:    1612276579,
 			ExpireSeconds: 3600,
 			Info:          make(map[string]string),
@@ -46,7 +47,7 @@ func BenchmarkTokenBase(b *testing.B) {
 		token.Info["sex"] = "female"
 		token.Info["github"] = "https://github.com/sun-moon-star-star"
 
-		token.Signature = Signature(token, []byte(key))
+		token.signature([]byte(key))
 
 		tokenJson, err := json.Marshal(token)
 		if err != nil {
