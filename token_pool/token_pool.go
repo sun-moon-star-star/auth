@@ -82,7 +82,7 @@ func (t *TokenPool) push(token *token.Token) error {
 	return nil
 }
 
-func (t *TokenPool) pushWithSelfGenerate(token *token.Token) error {
+func (t *TokenPool) PushWithSelfGenerate(token *token.Token) error {
 	return t.push(token)
 }
 
