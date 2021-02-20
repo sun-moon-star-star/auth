@@ -18,7 +18,7 @@ func TestTokenBase(t *testing.T) {
 	token.Info["age"] = "21"
 	token.Info["name"] = "zhao"
 
-	token.signature([]byte(key))
+	token.Sign([]byte(key))
 
 	t.Log(token.Signature)
 
@@ -47,7 +47,7 @@ func BenchmarkTokenBase(b *testing.B) {
 		token.Info["sex"] = "female"
 		token.Info["github"] = "https://github.com/sun-moon-star-star"
 
-		token.signature([]byte(key))
+		token.Sign([]byte(key))
 
 		tokenJson, err := json.Marshal(token)
 		if err != nil {

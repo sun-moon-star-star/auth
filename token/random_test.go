@@ -5,13 +5,13 @@ import (
 )
 
 func TestRandomBase(t *testing.T) {
-	uint64_id := GetUint64()
+	uint64_id := RandomUint64()
 	t.Log(uint64_id)
 
-	int64_id := GetInt64()
+	int64_id := RandomInt64()
 	t.Log(int64_id)
 
-	uuid, err := GetUUID()
+	uuid, err := RandomUUID()
 	if err != nil {
 		t.Fatal(err.Error())
 	}
