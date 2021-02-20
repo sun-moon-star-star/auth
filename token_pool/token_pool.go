@@ -8,9 +8,8 @@ import (
 )
 
 type TokenFlag struct {
-	ID            uint64
-	CreateTime    uint64
-	ExpireSeconds uint32
+	ID         uint64
+	ExpireTime uint64
 }
 
 type TokenPool struct {
@@ -29,12 +28,13 @@ func New(DefaultExpireSeconds uint32, DefaultKey []byte) *TokenPool {
 	}
 }
 
+// 定时任务清理
 func (t *TokenPool) RemoveExpire() {
 	for t.TokenFlags.Len() > 0 {
 		element := t.TokenFlags.Front()
 		tokenFlag := element.Value.(*TokenFlag)
 
-		if tokenFlag.CreateTime+uint64(tokenFlag.ExpireSeconds) >= uint64(time.Now().Unix()) {
+		if tokenFlag.ExpireTime <= uint64(time.Now().Unix()) {
 			delete(t.IndexID, tokenFlag.ID)
 			t.TokenFlags.Remove(element)
 		} else {
@@ -43,7 +43,7 @@ func (t *TokenPool) RemoveExpire() {
 	}
 }
 
-func (t *TokenPool) Push(token *token.Token) error {
+func (t *TokenPool) push(token *token.Token) error {
 	t.RemoveExpire()
 
 	_, ok := t.IndexID[token.ID]
@@ -52,15 +52,38 @@ func (t *TokenPool) Push(token *token.Token) error {
 	}
 
 	tokenFlag := &TokenFlag{
-		ID:            token.ID,
-		CreateTime:    token.CreateTime,
-		ExpireSeconds: token.ExpireSeconds,
+		ID:         token.ID,
+		ExpireTime: token.ExpireTime,
 	}
 
-	element := t.TokenFlags.PushBack(tokenFlag)
+	var element *list.Element
+
+	if t.TokenFlags.Len() == 0 {
+		element = t.TokenFlags.PushBack(tokenFlag)
+	} else {
+		element = t.TokenFlags.Back()
+
+		for {
+			if element == nil || element.Value.(*TokenFlag).ExpireTime <= tokenFlag.ExpireTime {
+				break
+			}
+			element = element.Prev()
+		}
+
+		if element == nil {
+			element = t.TokenFlags.PushFront(tokenFlag)
+		} else {
+			element = t.TokenFlags.InsertAfter(tokenFlag, element)
+		}
+	}
+
 	t.IndexID[tokenFlag.ID] = element
 
 	return nil
+}
+
+func (t *TokenPool) pushWithSelfGenerate(token *token.Token) error {
+	return t.push(token)
 }
 
 func (t *TokenPool) Remove(ID uint64) error {
@@ -68,7 +91,7 @@ func (t *TokenPool) Remove(ID uint64) error {
 
 	element, ok := t.IndexID[ID]
 	if !ok {
-		return fmt.Errorf("token(ID: %d) not exists in token pool, cannot be remove", ID)
+		return fmt.Errorf("token(ID: %d) is expired or not exists, cannot be remove", ID)
 	}
 
 	t.TokenFlags.Remove(element)
@@ -80,17 +103,12 @@ func (t *TokenPool) Remove(ID uint64) error {
 func (t *TokenPool) Check(token *token.Token) error {
 	t.RemoveExpire()
 
-	element, ok := t.IndexID[token.ID]
+	_, ok := t.IndexID[token.ID]
 	if !ok {
-		return fmt.Errorf("token(ID: %d) not exists in token pool, please try to acquire new token", token.ID)
+		return fmt.Errorf("token(ID: %d) is expired or not exists, please try to acquire new token", token.ID)
 	}
 
-	tokenFlag := element.Value.(*TokenFlag)
-	if tokenFlag.CreateTime+uint64(tokenFlag.ExpireSeconds) >= uint64(time.Now().Unix()) {
-		return fmt.Errorf("token(ID: %d) is expired, please try to acquire new token", token.ID)
-	}
-
-	if !token.Check(t.DefaultKey) {
+	if !token.CheckSign(t.DefaultKey) {
 		return fmt.Errorf("token(ID: %d) is not valid", token.ID)
 	}
 
@@ -98,11 +116,13 @@ func (t *TokenPool) Check(token *token.Token) error {
 }
 
 func (t *TokenPool) generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *token.Token {
+	createTime := uint64(time.Now().Unix())
+
 	newToken := &token.Token{
-		ID:            token.RandomUint64(),
-		CreateTime:    uint64(time.Now().Unix()),
-		ExpireSeconds: expireSeconds,
-		Info:          info,
+		ID:         token.RandomUint64(),
+		CreateTime: createTime,
+		ExpireTime: createTime + uint64(expireSeconds),
+		Info:       info,
 	}
 
 	for {
@@ -115,12 +135,16 @@ func (t *TokenPool) generateTokenNoCopyInfo(info map[string]string, expireSecond
 
 	newToken.Sign(key)
 
-	t.Push(newToken)
+	t.push(newToken)
 
 	return newToken
 }
 
 func copyInfo(info map[string]string) map[string]string {
+	if info == nil {
+		return nil
+	}
+
 	infoNew := make(map[string]string)
 
 	for k, v := range info {
