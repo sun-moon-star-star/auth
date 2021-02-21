@@ -15,6 +15,7 @@ func TestTokenBase(t *testing.T) {
 		Info:       make(map[string]string),
 	}
 
+	token.Info["version"] = "1.0"
 	token.Info["age"] = "21"
 	token.Info["name"] = "zhao"
 
@@ -42,6 +43,7 @@ func BenchmarkTokenBase(b *testing.B) {
 			Info:       make(map[string]string),
 		}
 
+		token.Info["version"] = "1.0"
 		token.Info["age"] = "21"
 		token.Info["name"] = "zhao"
 		token.Info["sex"] = "female"
