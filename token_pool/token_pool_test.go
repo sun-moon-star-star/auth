@@ -49,14 +49,14 @@ func TestTokenPoolCheckStrategy(t *testing.T) {
 			return false
 		}
 
-		if strings.Compare(value, "1.0") == 0 {
+		if strings.Compare(value.(string), "1.0") == 0 {
 			return false
 		}
 
 		return token.Check(pool.DefaultKey)
 	}
 
-	info := map[string]string{
+	info := map[string]interface{}{
 		"version": "1.0",
 		"name":    "sun-moon-star-star",
 	}

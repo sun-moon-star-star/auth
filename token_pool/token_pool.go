@@ -194,7 +194,7 @@ func (pool *TokenPool) Check(token *token.Token) error {
 	return nil
 }
 
-func (pool *TokenPool) generateToken(info map[string]string, expireSeconds uint32, key []byte, copyInfo bool) *token.Token {
+func (pool *TokenPool) generateToken(info token.TokenInfo, expireSeconds uint32, key []byte, copyInfo bool) *token.Token {
 	var newToken *token.Token
 	if copyInfo {
 		newToken = token.GenerateToken(info, expireSeconds, key)
@@ -206,11 +206,11 @@ func (pool *TokenPool) generateToken(info map[string]string, expireSeconds uint3
 	return newToken
 }
 
-func (t *TokenPool) GenerateTokenNoCopyInfo(info map[string]string) *token.Token {
+func (t *TokenPool) GenerateTokenNoCopyInfo(info token.TokenInfo) *token.Token {
 	return t.generateToken(info, t.DefaultExpireSeconds, t.DefaultKey, false)
 }
 
-func (t *TokenPool) GenerateToken(info map[string]string) *token.Token {
+func (t *TokenPool) GenerateToken(info token.TokenInfo) *token.Token {
 	return t.generateToken(info, t.DefaultExpireSeconds, t.DefaultKey, true)
 }
 
