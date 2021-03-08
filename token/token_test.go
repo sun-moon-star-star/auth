@@ -12,7 +12,7 @@ func TestTokenBase(t *testing.T) {
 		ID:         GenerateTokenID(),
 		CreateTime: 1612276579,
 		ExpireTime: 1612276580,
-		Info:       make(map[string]string),
+		Info:       make(TokenInfo),
 	}
 
 	token.Info["version"] = "1.0"
@@ -40,7 +40,7 @@ func BenchmarkTokenBase(b *testing.B) {
 			ID:         GenerateTokenID(),
 			CreateTime: 1612276579,
 			ExpireTime: 1612276580,
-			Info:       make(map[string]string),
+			Info:       make(TokenInfo),
 		}
 
 		token.Info["version"] = "1.0"

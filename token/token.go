@@ -11,24 +11,26 @@ import (
 
 type TokenID uint64
 
+type TokenInfo map[string]interface{}
+
 type Token struct {
-	ID         TokenID           `json:"ID"`
-	CreateTime uint64            `json:"CreateTime"`
-	ExpireTime uint64            `json:"ExpireTime"`
-	Info       map[string]string `json:"Info"`
-	Signature  string            `json:"Signature"`
+	ID         TokenID   `json:"ID"`
+	CreateTime uint64    `json:"CreateTime"`
+	ExpireTime uint64    `json:"ExpireTime"`
+	Info       TokenInfo `json:"Info"` // _token_* keeps
+	Signature  string    `json:"Signature"`
 }
 
 func GenerateTokenID() TokenID {
 	return TokenID(random.RandomUint64())
 }
 
-func copyInfo(info map[string]string) map[string]string {
+func copyInfo(info TokenInfo) TokenInfo {
 	if info == nil {
 		return nil
 	}
 
-	infoNew := make(map[string]string)
+	infoNew := make(TokenInfo)
 
 	for k, v := range info {
 		infoNew[k] = v
@@ -37,7 +39,7 @@ func copyInfo(info map[string]string) map[string]string {
 	return infoNew
 }
 
-func generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *Token {
+func generateTokenNoCopyInfo(info TokenInfo, expireSeconds uint32, key []byte) *Token {
 	createTime := uint64(time.Now().Unix())
 
 	newToken := &Token{
@@ -52,11 +54,11 @@ func generateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key [
 	return newToken
 }
 
-func GenerateTokenNoCopyInfo(info map[string]string, expireSeconds uint32, key []byte) *Token {
+func GenerateTokenNoCopyInfo(info TokenInfo, expireSeconds uint32, key []byte) *Token {
 	return generateTokenNoCopyInfo(info, expireSeconds, key)
 }
 
-func GenerateToken(info map[string]string, expireSeconds uint32, key []byte) *Token {
+func GenerateToken(info TokenInfo, expireSeconds uint32, key []byte) *Token {
 	return generateTokenNoCopyInfo(copyInfo(info), expireSeconds, key)
 }
 
