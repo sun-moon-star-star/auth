@@ -32,9 +32,8 @@ type TokenPool struct {
 type TokenPoolOption struct {
 	DefaultExpireSeconds uint32
 	DefaultKey           []byte
-
-	PushStrategy  Strategy
-	CheckStrategy Strategy
+	PushStrategy         Strategy
+	CheckStrategy        Strategy
 }
 
 var defaultTokenPoolOption = TokenPoolOption{
