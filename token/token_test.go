@@ -3,6 +3,7 @@ package token
 import (
 	"encoding/json"
 	"testing"
+	"time"
 )
 
 func TestTokenBase(t *testing.T) {
@@ -21,11 +22,19 @@ func TestTokenBase(t *testing.T) {
 
 	token.Sign([]byte(key))
 
-	t.Log(token.Signature)
+	if !token.CheckSign([]byte(key)) {
+		t.Errorf("check strategy failed")
+	}
 
 	tokenJson, err := json.Marshal(token)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	time.Sleep(time.Second)
+	// timeout failed token become invalid
+	if token.Check([]byte(key)) {
+		t.Errorf("check strategy failed")
 	}
 
 	t.Log(string(tokenJson))
