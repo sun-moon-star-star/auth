@@ -40,6 +40,7 @@ func TestTokenPoolExpired(t *testing.T) {
 func TestTokenPoolCheckStrategy(t *testing.T) {
 	pool := New()
 	pool.DefaultExpireSeconds = 2
+	// no save token any condition
 	pool.PushStrategy = func(token *token.Token, pool *TokenPool) bool {
 		return false
 	}
