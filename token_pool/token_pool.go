@@ -1,11 +1,12 @@
 package token_pool
 
 import (
-	"auth/random"
-	"auth/token"
 	"container/list"
 	"fmt"
 	"time"
+
+	"github.com/sun-moon-star-star/auth/random"
+	"github.com/sun-moon-star-star/auth/token"
 )
 
 type TokenFlag struct {

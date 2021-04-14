@@ -1,10 +1,11 @@
 package token_pool
 
 import (
-	"auth/token"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/sun-moon-star-star/auth/token"
 )
 
 func TestTokenPoolBase(t *testing.T) {

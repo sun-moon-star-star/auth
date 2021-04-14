@@ -1,12 +1,13 @@
 package token
 
 import (
-	"auth/crypto"
-	"auth/random"
 	"encoding/hex"
 	"fmt"
 	"sort"
 	"time"
+
+	"github.com/sun-moon-star-star/auth/crypto"
+	"github.com/sun-moon-star-star/auth/random"
 )
 
 type TokenID uint64
