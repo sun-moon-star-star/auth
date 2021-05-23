@@ -10,7 +10,7 @@ import (
 
 func TestTokenPoolBase(t *testing.T) {
 	pool := New()
-	pool.DefaultExpireSeconds = 2
+	pool.DefaultExpireUnixNano = 2 * 1e9
 
 	token := pool.GenerateTokenID()
 	if err := pool.Check(token); err != nil {
@@ -25,7 +25,7 @@ func TestTokenPoolBase(t *testing.T) {
 
 func TestTokenPoolExpired(t *testing.T) {
 	pool := New()
-	pool.DefaultExpireSeconds = 2
+	pool.DefaultExpireUnixNano = 2 * 1e9
 
 	token := pool.GenerateTokenID()
 	if err := pool.Check(token); err != nil {
@@ -40,7 +40,7 @@ func TestTokenPoolExpired(t *testing.T) {
 
 func TestTokenPoolCheckStrategy(t *testing.T) {
 	pool := New()
-	pool.DefaultExpireSeconds = 2
+	pool.DefaultExpireUnixNano = 2 * 1e9
 	// no save token any condition
 	pool.PushStrategy = func(token *token.Token, pool *TokenPool) bool {
 		return false

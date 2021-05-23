@@ -18,8 +18,8 @@ type TokenInfo map[string]interface{}
 
 type Token struct {
 	ID         TokenID   `json:"ID"`
-	CreateTime uint64    `json:"CreateTime"` // millisecond timestamp
-	ExpireTime uint64    `json:"ExpireTime"` // millisecond timestamp
+	CreateTime uint64    `json:"CreateTime"` // unixnano
+	ExpireTime uint64    `json:"ExpireTime"` // unixnano
 	Info       TokenInfo `json:"Info"`       // _token_* keeps
 	Signature  string    `json:"Signature"`
 }
@@ -107,7 +107,7 @@ func (token *Token) CheckSign(key []byte) bool {
 }
 
 func (token *Token) CheckTime() bool {
-	return token.ExpireTime > uint64(time.Now().UnixNano())
+	return token.ExpireTime >= uint64(time.Now().UnixNano())
 }
 
 func (token *Token) Check(key []byte) bool {

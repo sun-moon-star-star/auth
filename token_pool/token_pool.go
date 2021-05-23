@@ -17,8 +17,8 @@ type TokenFlag struct {
 type Strategy func(*token.Token, *TokenPool) bool
 
 type TokenPool struct {
-	DefaultExpireSeconds uint32
-	DefaultKey           []byte
+	DefaultExpireUnixNano uint64
+	DefaultKey            []byte
 
 	PushStrategy  Strategy
 	CheckStrategy Strategy
@@ -31,15 +31,15 @@ type TokenPool struct {
 }
 
 type TokenPoolOption struct {
-	DefaultExpireSeconds uint32
-	DefaultKey           []byte
-	PushStrategy         Strategy
-	CheckStrategy        Strategy
+	DefaultExpireUnixNano uint64
+	DefaultKey            []byte
+	PushStrategy          Strategy
+	CheckStrategy         Strategy
 }
 
 var defaultTokenPoolOption = TokenPoolOption{
-	DefaultExpireSeconds: 1200, // 20min
-	DefaultKey:           []byte(random.RandomString(16)),
+	DefaultExpireUnixNano: 1200 * 1e9, // 20min
+	DefaultKey:            []byte(random.RandomString(16)),
 	PushStrategy: func(*token.Token, *TokenPool) bool {
 		return true
 	},
@@ -60,8 +60,8 @@ var defaultTokenPoolOption = TokenPoolOption{
 
 func NewWithOption(option TokenPoolOption) *TokenPool {
 	return &TokenPool{
-		DefaultExpireSeconds: option.DefaultExpireSeconds,
-		DefaultKey:           option.DefaultKey,
+		DefaultExpireUnixNano: option.DefaultExpireUnixNano,
+		DefaultKey:            option.DefaultKey,
 
 		PushStrategy:  option.PushStrategy,
 		CheckStrategy: option.CheckStrategy,
@@ -84,7 +84,7 @@ func (pool *TokenPool) ClearExpired() {
 		element := pool.TokenFlags.Front()
 		tokenFlag := element.Value.(*TokenFlag)
 
-		if tokenFlag.ExpireTime <= uint64(time.Now().Unix()) {
+		if tokenFlag.ExpireTime <= uint64(time.Now().UnixNano()) {
 			pool.TokenFlags.Remove(element)
 			delete(pool.IndexID, tokenFlag.ID)
 		} else {
@@ -96,7 +96,7 @@ func (pool *TokenPool) ClearExpired() {
 		element := pool.TokenFlags.Front()
 		tokenFlag := element.Value.(*TokenFlag)
 
-		if tokenFlag.ExpireTime <= uint64(time.Now().Unix()) {
+		if tokenFlag.ExpireTime <= uint64(time.Now().UnixNano()) {
 			pool.ExpiredTokenFlags.Remove(element)
 			delete(pool.ExpiredIDs, tokenFlag.ID)
 		} else {
@@ -195,12 +195,12 @@ func (pool *TokenPool) Check(token *token.Token) error {
 	return nil
 }
 
-func (pool *TokenPool) generateToken(info token.TokenInfo, expireSeconds uint32, key []byte, copyInfo bool) *token.Token {
+func (pool *TokenPool) generateToken(info token.TokenInfo, expireUnixNano uint64, key []byte, copyInfo bool) *token.Token {
 	var newToken *token.Token
 	if copyInfo {
-		newToken = token.GenerateToken(info, expireSeconds, key)
+		newToken = token.GenerateToken(info, expireUnixNano, key)
 	} else {
-		newToken = token.GenerateTokenNoCopyInfo(info, expireSeconds, key)
+		newToken = token.GenerateTokenNoCopyInfo(info, expireUnixNano, key)
 	}
 
 	pool.push(newToken)
@@ -208,13 +208,13 @@ func (pool *TokenPool) generateToken(info token.TokenInfo, expireSeconds uint32,
 }
 
 func (t *TokenPool) GenerateTokenNoCopyInfo(info token.TokenInfo) *token.Token {
-	return t.generateToken(info, t.DefaultExpireSeconds, t.DefaultKey, false)
+	return t.generateToken(info, t.DefaultExpireUnixNano, t.DefaultKey, false)
 }
 
 func (t *TokenPool) GenerateToken(info token.TokenInfo) *token.Token {
-	return t.generateToken(info, t.DefaultExpireSeconds, t.DefaultKey, true)
+	return t.generateToken(info, t.DefaultExpireUnixNano, t.DefaultKey, true)
 }
 
 func (t *TokenPool) GenerateTokenID() *token.Token {
-	return t.generateToken(nil, t.DefaultExpireSeconds, t.DefaultKey, false)
+	return t.generateToken(nil, t.DefaultExpireUnixNano, t.DefaultKey, false)
 }

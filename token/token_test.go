@@ -51,8 +51,8 @@ func BenchmarkTokenBase(b *testing.B) {
 		key := "bajiuwenqingtian"
 		token := &Token{
 			ID:         GenerateTokenID(),
-			CreateTime: 1612276579,
-			ExpireTime: 1612276580,
+			CreateTime: 1612276579 * 1e9,
+			ExpireTime: 1612276580 * 1e9,
 			Info:       make(TokenInfo),
 		}
 
