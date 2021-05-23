@@ -2,9 +2,14 @@ package token
 
 import (
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 )
+
+type a struct {
+	str string
+}
 
 func TestTokenBase(t *testing.T) {
 	key := "bajiuwenqingtian"
@@ -19,16 +24,13 @@ func TestTokenBase(t *testing.T) {
 	token.Info["version"] = "1.0"
 	token.Info["age"] = "21"
 	token.Info["name"] = "zhao"
+	token.Info["error"] = errors.New("unknown error")
+	token.Info["struct"] = &a{"zhaolu"}
 
 	token.Sign([]byte(key))
 
 	if !token.CheckSign([]byte(key)) {
 		t.Errorf("check strategy failed")
-	}
-
-	tokenJson, err := json.Marshal(token)
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	time.Sleep(time.Second)
@@ -37,7 +39,7 @@ func TestTokenBase(t *testing.T) {
 		t.Errorf("check strategy failed")
 	}
 
-	t.Log(string(tokenJson))
+	t.Log(TokenString(token))
 }
 
 func BenchmarkTokenBase(b *testing.B) {

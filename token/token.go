@@ -16,9 +16,9 @@ type TokenInfo map[string]interface{}
 
 type Token struct {
 	ID         TokenID   `json:"ID"`
-	CreateTime uint64    `json:"CreateTime"`
-	ExpireTime uint64    `json:"ExpireTime"`
-	Info       TokenInfo `json:"Info"` // _token_* keeps
+	CreateTime uint64    `json:"CreateTime"` // millisecond timestamp
+	ExpireTime uint64    `json:"ExpireTime"` // millisecond timestamp
+	Info       TokenInfo `json:"Info"`       // _token_* keeps
 	Signature  string    `json:"Signature"`
 }
 
@@ -63,6 +63,21 @@ func GenerateToken(info TokenInfo, expireSeconds uint32, key []byte) *Token {
 	return generateTokenNoCopyInfo(copyInfo(info), expireSeconds, key)
 }
 
+func TokenString(token *Token) string {
+	tokenStr := fmt.Sprintf("CreateTime=%d&ExpireTime=%d\n", token.CreateTime, token.ExpireTime)
+	var keys []string
+	for k := range token.Info {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		tokenStr += fmt.Sprintf("&%s=%+v", k, token.Info[k])
+	}
+
+	return tokenStr
+}
+
 func Sign(token *Token, key []byte) string {
 	tokenStr := fmt.Sprintf("CreateTime=%d&ExpireTime=%d\n", token.CreateTime, token.ExpireTime)
 
@@ -73,7 +88,7 @@ func Sign(token *Token, key []byte) string {
 	sort.Strings(keys)
 
 	for _, k := range keys {
-		tokenStr += fmt.Sprintf("&%s=%s", k, token.Info[k])
+		tokenStr += fmt.Sprintf("&%s=%+v", k, token.Info[k])
 	}
 
 	signature := crypto.Hmac([]byte(tokenStr), key)
