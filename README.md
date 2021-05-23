@@ -16,8 +16,8 @@ func main() {
 
 	token := &token.Token{
 		ID:         token.GenerateTokenID(),
-		CreateTime: 1612276579,
-		ExpireTime: 1612276580,
+		CreateTime: uint64(time.Now().UnixNano()),
+		ExpireTime: uint64(time.Now().UnixNano()+1e9),
 		Info:       make(token.TokenInfo),
 	}
 

@@ -14,10 +14,11 @@ type a struct {
 func TestTokenBase(t *testing.T) {
 	key := "bajiuwenqingtian"
 
+	now := uint64(time.Now().UnixNano())
 	token := &Token{
 		ID:         GenerateTokenID(),
-		CreateTime: 1612276579,
-		ExpireTime: 1612276580,
+		CreateTime: now,
+		ExpireTime: now + 1e6,
 		Info:       make(TokenInfo),
 	}
 
@@ -33,9 +34,10 @@ func TestTokenBase(t *testing.T) {
 		t.Errorf("check strategy failed")
 	}
 
-	time.Sleep(time.Second)
+	time.Sleep(time.Millisecond)
+
 	// timeout failed token become invalid
-	if token.Check([]byte(key)) {
+	if token.CheckTime() || !token.CheckSign([]byte(key)) {
 		t.Errorf("check strategy failed")
 	}
 

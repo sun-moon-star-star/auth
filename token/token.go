@@ -12,6 +12,8 @@ import (
 
 type TokenID uint64
 
+var defaultFillChar byte = '-'
+
 type TokenInfo map[string]interface{}
 
 type Token struct {
@@ -40,13 +42,13 @@ func copyInfo(info TokenInfo) TokenInfo {
 	return infoNew
 }
 
-func generateTokenNoCopyInfo(info TokenInfo, expireSeconds uint32, key []byte) *Token {
-	createTime := uint64(time.Now().Unix())
+func generateTokenNoCopyInfo(info TokenInfo, expireUnixNano uint64, key []byte) *Token {
+	createTime := uint64(time.Now().UnixNano())
 
 	newToken := &Token{
 		ID:         GenerateTokenID(),
 		CreateTime: createTime,
-		ExpireTime: createTime + uint64(expireSeconds),
+		ExpireTime: createTime + expireUnixNano,
 		Info:       info,
 	}
 
@@ -55,12 +57,12 @@ func generateTokenNoCopyInfo(info TokenInfo, expireSeconds uint32, key []byte) *
 	return newToken
 }
 
-func GenerateTokenNoCopyInfo(info TokenInfo, expireSeconds uint32, key []byte) *Token {
-	return generateTokenNoCopyInfo(info, expireSeconds, key)
+func GenerateTokenNoCopyInfo(info TokenInfo, expireUnixNano uint64, key []byte) *Token {
+	return generateTokenNoCopyInfo(info, expireUnixNano, key)
 }
 
-func GenerateToken(info TokenInfo, expireSeconds uint32, key []byte) *Token {
-	return generateTokenNoCopyInfo(copyInfo(info), expireSeconds, key)
+func GenerateToken(info TokenInfo, expireUnixNano uint64, key []byte) *Token {
+	return generateTokenNoCopyInfo(copyInfo(info), expireUnixNano, key)
 }
 
 func TokenString(token *Token) string {
@@ -105,7 +107,7 @@ func (token *Token) CheckSign(key []byte) bool {
 }
 
 func (token *Token) CheckTime() bool {
-	return token.ExpireTime > uint64(time.Now().Unix())
+	return token.ExpireTime > uint64(time.Now().UnixNano())
 }
 
 func (token *Token) Check(key []byte) bool {
